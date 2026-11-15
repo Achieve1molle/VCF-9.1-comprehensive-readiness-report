@@ -1,421 +1,135 @@
-# Comprehensive VCF 9.1 Readiness Report
+# Presidio Comprehensive VCF 9.1 Readiness Report
 
-A Presidio-branded assessment workflow for evaluating a VMware vSphere 8 estate against VMware Cloud Foundation 9.1 and ESXi 9.1 readiness requirements.
+Version 26 provides an evidence-driven assessment of a VMware vSphere estate for VMware Cloud Foundation 9.1 and ESXi 9.1 readiness. The solution combines RVTools, read-only PowerCLI evidence, optional BMC/Redfish inventory, Broadcom guidance, and Broadcom Compatibility Guide evidence to produce an HTML report, Excel evidence workbook, PNG charts, verification records, and a prioritized remediation register.
 
-The solution combines RVTools inventory, read-only PowerCLI collectors, BMC/Redfish hardware evidence, current Broadcom knowledge articles, and Broadcom Compatibility Guide results. It produces a self-contained HTML report, an Excel evidence workbook, high-resolution charts, and a prioritized remediation register.
+## What changed in Version 26
 
-## Workflow
+- Adds the unified `Collect-VCF-Evidence.ps1` collection workflow.
+- Retains `Collect-VCF-BMC-Inventory.ps1` for optional BMC/Redfish hardware evidence.
+- Supports sanitization and restoration either through the Skill workflow or customer-site PowerShell.
+- Documents the built-in BCG sidecar workflow used by Copilot Agent Store.
+- Documents the external/local sidecar workflow used with AI Studio.
+- Supports a pre-built BCG cache for repeatable or disconnected report generation.
+- Preserves evidence precedence, diagnostic states, leak scanning, release gates, and exact PCI matching.
 
-The solution follows the same five-stage workflow shown in the project graphic:
+## Minimum and recommended inputs
 
-```text
-1. CAPTURE       2. SANITIZE        3. GENERATE        4. DELIVER       5. RESTORE
-Customer site    Optional            Presidio skill     Final product    Optional
+### Minimum
 
-RVTools          Tokenize names      Load evidence      HTML report      Restore names
-PowerCLI         Retain technical    Review Broadcom    Excel workbook   using KEY.csv
-BMC/Redfish      evidence            Validate BCG       PNG charts
-                                    Run QA gates        Evidence JSON
-```
+- One complete RVTools `.xlsx` export from one vCenter, with all worksheets retained.
 
-### Stage 1: Capture
+### Recommended
 
-Minimum input:
+- One RVTools export per vCenter.
+- `Collect-VCF-Evidence.ps1` output for vCenter, cluster, host, network, datastore, vSAN, lifecycle, security, VM encryption, feature, utilization, and diagnostic evidence.
+- `Collect-VCF-BMC-Inventory.ps1` output for server, firmware, PCIe, storage, TPM, Secure Boot, and Redfish diagnostics.
+- Live BCG access, the Copilot built-in sidecar, an AI Studio sidecar return package, or a validated pre-built BCG cache.
 
-- One complete RVTools `.xlsx` export per vCenter
+## Version 26 workflow
 
-Recommended read-only evidence:
+1. **Capture** RVTools, PowerCLI, and optional BMC/Redfish evidence at the customer site.
+2. **Sanitize** when required, using the Skill or `Invoke-VCF-Sanitize-Rev2.ps1`.
+3. **Generate** the readiness assessment in Copilot or AI Studio.
+4. **Deliver** HTML, Excel, PNG, JSON verification, and prioritized actions.
+5. **Restore** customer identifiers when required, using the Skill or `Invoke-VCF-Unsanitize-Rev2.ps1` with the customer-retained `KEY.csv`.
 
-- Core vCenter, cluster, host, network, datastore, PCI, VM encryption, and VM feature collection
-- Host DNS, NTP, Secure Boot, TPM, image, VIB, NIC firmware, HSM, and vSAN disk collection
-- Historical host and VM active-memory collection
-- BMC/Redfish system, firmware, PCIe, and storage collection
+## Collection
 
-### Stage 2: Sanitize
-
-Sanitization is optional and runs at the customer site.
-
-The sanitizer tokenizes environment identity while preserving compatibility evidence.
-
-Tokenized or removed:
-
-- vCenter, host, VM, cluster, datacenter, network, datastore, and folder names
-- IP and MAC addresses
-- UUIDs, serial numbers, and service tags
-- Credentials, license keys, and general free-text notes
-
-Preserved:
-
-- Hardware vendor and model
-- CPU model and series
-- Guest operating system
-- BIOS, firmware, and driver versions
-- PCI VID, DID, SVID, and SSID
-- Protocol, media, TPM, Secure Boot, and other technical readiness evidence
-
-`KEY.csv` remains at the customer site and must not be included in the upload package.
-
-### Stage 3: Generate
-
-The Presidio readiness skill:
-
-1. Validates the input files and evidence coverage.
-2. Reviews current Broadcom KB and TechDocs guidance for VCF 9.1.
-3. Attempts live Broadcom Compatibility Guide validation.
-4. Produces a portable sidecar plan when direct BCG access is blocked or incomplete.
-5. Reconciles RVTools, PowerCLI, BMC, BCG, driver, firmware, encryption, memory, and health evidence.
-6. Generates the report and evidence workbook.
-7. Runs QA, count-integrity, consistency, sanitization, and release gates.
-
-### Stage 4: Deliver
-
-Primary deliverables:
-
-- Self-contained HTML readiness report
-- Excel evidence workbook
-- High-resolution PNG charts
-- Verification evidence JSON
-- BCG query plan or sidecar results when applicable
-- Prioritized action and remediation register
-
-### Stage 5: Restore
-
-When sanitized deliverables need their original environment identifiers, the customer uses the retained `KEY.csv` and the Rev2 unsanitizer at the customer site.
-
----
-
-## Repository contents
-
-Recommended cleaned package layout:
-
-```text
-VCF91-Readiness/
-├── README.md
-├── WIKI.md
-├── RunCollection.md
-├── Workflow-VCF91-Readiness.png
-├── collectors/
-│   ├── Collect-VCF-Readiness-Rev2.ps1
-│   ├── Collect-VCF-Host-DeepDive-Rev2.ps1
-│   ├── Collect-VCF-Memory-Active-Rev2.ps1
-│   └── Collect-VCF-BMC-Inventory.ps1
-├── sanitization/
-│   ├── Invoke-VCF-Sanitize-Rev2.ps1
-│   └── Invoke-VCF-Unsanitize-Rev2.ps1
-├── sidecar/
-│   └── BCG-Sidecar-Collector/
-└── skill/
-    └── presidio-comprehensive-vcf-9-1-readiness-report.zip
-```
-
-Older collector revisions, intermediate skill packages, development reports, and regression artifacts should be stored outside the distribution package.
-
----
-
-## Requirements
-
-### Collection workstation
-
-- Windows PowerShell 7 or later
-- VMware PowerCLI
-- Network access to each vCenter over HTTPS
-- Network access to BMC interfaces when Redfish collection is used
-- Read-only accounts with sufficient inventory privileges
-
-### Sanitization workstation
-
-- PowerShell 7
-- ImportExcel module for Excel sanitization and restoration
-- Protected local storage for `KEY.csv`
-
-### Report-generation environment
-
-- Python 3
-- pandas
-- openpyxl
-- matplotlib
-- Access to current Broadcom documentation
-- Broadcom Compatibility Guide access when available
-
----
-
-## Quick start
-
-### 1. Define the workspace and vCenters
+### Unified PowerCLI collection
 
 ```powershell
-$Root = 'C:\Script\VCF91-Readiness'
-$VCenter = @(
-    'pod01vcsa01.corp.achieve-1.com',
-    'pod01vcsa02.corp.achieve-1.com'
-)
-
-New-Item -ItemType Directory -Force -Path `
-    $Root, `
-    "$Root\RVTools", `
-    "$Root\Readiness", `
-    "$Root\DeepDive", `
-    "$Root\Memory", `
-    "$Root\BMC", `
-    "$Root\Sanitized", `
-    "$Root\ToUpload" | Out-Null
-
-Set-ExecutionPolicy -Scope Process Bypass
+.\Collect-VCF-Evidence.ps1 `
+  -VCenterList .\vcenters.txt `
+  -PasswordFile .\vcenter-credentials.csv `
+  -AllowClearTextCredentials `
+  -CollectionProfile Full `
+  -OutputRoot .\Evidence
 ```
 
-### 2. Export RVTools
+The unified collector is designed for unattended, long-running, multi-vCenter collection. Version 26 collection logic includes progress logging, stage checkpoints, host-level checkpoints, diagnostics, and recovery behavior for large estates. Use read-only vCenter accounts. Protect any credential file according to customer policy and remove it before packaging evidence.
 
-Create one complete RVTools `.xlsx` export per vCenter and place the files in:
-
-```text
-C:\Script\VCF91-Readiness\RVTools
-```
-
-### 3. Run the core readiness collector
-
-```powershell
-.\Collect-VCF-Readiness-Rev2.ps1 `
-    -VCenter $VCenter `
-    -OutDir "$Root\Readiness" `
-    -IncludePci
-```
-
-This collector prompts separately for each vCenter when a shared `-Credential` is not supplied.
-
-### 4. Run the host deep-dive collector
-
-```powershell
-.\Collect-VCF-Host-DeepDive-Rev2.ps1 `
-    -VCenter $VCenter `
-    -OutDir "$Root\DeepDive"
-```
-
-### 5. Run the memory and NVMe collector
-
-```powershell
-.\Collect-VCF-Memory-Active-Rev2.ps1 `
-    -VCenter $VCenter `
-    -Days 30 `
-    -MaxVMsPerVCenter 50 `
-    -OutDir "$Root\Memory"
-```
-
-### 6. Run the BMC/Redfish collector
-
-Create `bmc.txt` with one iDRAC, iLO, or CIMC address per line, then run:
+### BMC/Redfish collection
 
 ```powershell
 .\Collect-VCF-BMC-Inventory.ps1 `
-    -BmcList .\bmc.txt `
-    -OutDir "$Root\BMC"
+  -BmcList .\bmc.txt `
+  -OutDir .\Evidence\BMC
 ```
 
-### 7. Review coverage and diagnostics
+Supported targets include Dell iDRAC, HPE iLO, Cisco CIMC, and standards-compliant Redfish endpoints. Review `bmc_diagnostics.csv` whenever PCIe, storage, firmware, or physical-drive evidence is empty or incomplete.
+
+## Sanitization and restoration
+
+### Skill-managed workflow
+
+Use the Skill-managed workflow when the Skill runtime has the required input and output access. Select sanitized processing before report generation. The Skill creates a token mapping and applies the same identity-removal rules used by the PowerShell workflow. Keep the resulting `KEY.csv` at the customer site and never upload it with sanitized evidence.
+
+For restoration, provide the generated report and retained `KEY.csv` to the restoration workflow in the approved customer environment. Technical values remain unchanged; only mapped identifiers are restored.
+
+### PowerShell workflow
+
+Sanitize before upload:
 
 ```powershell
-Get-ChildItem "$Root\Readiness","$Root\DeepDive","$Root\Memory","$Root\BMC" `
-    -File -Filter *.csv |
-    Select-Object DirectoryName, Name, Length |
-    Sort-Object DirectoryName, Name |
-    Format-Table -AutoSize
-```
-
-Review these files before continuing:
-
-```text
-pcli_vm_coverage.csv
-pcli_deepdive_diagnostics.csv
-pcli_mem_coverage.csv
-pcli_mem_diagnostics.csv
-bmc_diagnostics.csv
-```
-
-### 8. Sanitize when required
-
-```powershell
-$InputPaths = @(
-    "$Root\RVTools",
-    "$Root\Readiness",
-    "$Root\DeepDive",
-    "$Root\Memory",
-    "$Root\BMC"
-)
-
 .\Invoke-VCF-Sanitize-Rev2.ps1 `
-    -Path $InputPaths `
-    -KeyFile "$Root\KEY.csv" `
-    -OutDir "$Root\Sanitized" `
-    -Verify
+  -Path .\Evidence `
+  -KeyFile .\KEY.csv `
+  -OutDir .\Sanitized `
+  -Verify
 ```
 
-### 9. Create the upload archive
-
-```powershell
-Copy-Item "$Root\Sanitized\*" "$Root\ToUpload" -Recurse -Force
-
-Compress-Archive `
-    -Path "$Root\ToUpload\*" `
-    -DestinationPath "$Root\VCF91-Readiness-Evidence.zip" `
-    -Force
-```
-
-If sanitization is not required, copy the RVTools and collector directories directly into `ToUpload` before creating the ZIP.
-
-### 10. Restore identifiers when required
+Restore approved deliverables:
 
 ```powershell
 .\Invoke-VCF-Unsanitize-Rev2.ps1 `
-    -Path .\Sanitized_Estate_VCF_9.1_Readiness_Report.html, `
-          .\Sanitized_Estate_VCF_9.1_Readiness_Data.xlsx `
-    -KeyFile "$Root\KEY.csv" `
-    -OutDir "$Root\Restored"
+  -Path .\Sanitized\VCF_Readiness_Report.html, .\Sanitized\VCF_Readiness_Data.xlsx `
+  -KeyFile .\KEY.csv `
+  -OutDir .\Restored
 ```
 
-For the complete collection procedure, see `RunCollection.md`.
+Sanitization tokenizes customer-identifying names, IP addresses, MAC addresses, UUIDs, serial numbers, service tags, domains, email addresses, credentials, license values, and free-text identity. Hardware models, CPU models, BIOS, firmware, drivers, PCI identifiers, protocols, operating-system versions, TPM, and Secure Boot evidence are preserved for compatibility analysis.
 
----
+## Broadcom Compatibility Guide execution options
 
-## Evidence collected
+### Copilot Agent Store
 
-### Core readiness
+The Copilot package uses the built-in sidecar workflow when direct BCG access is unavailable or incomplete. The Skill creates or consumes a validated query plan, applies checksum validation, imports returned BCG results, and runs the same evidence gates used for live lookup. Do not add unsupported `.html` fixtures or generated reports to `skill.zip`.
 
-- vCenter version and build
-- Cluster HA, DRS, EVC, lifecycle, vSAN, and stretched evidence
-- Host hardware, ESXi build, BIOS, TPM, connection state, and lockdown mode
-- VMkernel services, IP mode, MTU, and service roles
-- Distributed switch version, MTU, uplinks, and LACP
-- Datastore type and capacity
-- PCI identifiers and drivers
-- Complete VM encryption inventory
-- Deterministic detailed VM-feature sample with coverage reporting
+### AI Studio
 
-### Host deep dive
+AI Studio can use a local or externally hosted sidecar with custom tools/actions. The sidecar executes the BCG query plan in an authorized network context, returns machine-readable result JSON, and preserves query-plan and result checksums. AI Studio deployments can automate sidecar execution through Python, PowerShell, or an approved custom action.
 
-- DNS and NTP configuration
-- Secure Boot and TPM
-- Lockdown mode and SSH
-- Image profile and OEM add-on
-- VIB inventory and acceptance levels
-- NIC driver and firmware
-- vSAN disks and disk groups
-- Stage-level diagnostics
+### Pre-built BCG cache
 
-### Memory and NVMe
+A pre-built cache is recommended when:
 
-- Host and VM active-memory average, P95, and maximum
-- Sample counts and query status
-- Memory-tier configuration
-- Local NVMe candidates
-- Boot-device identification
-- Coverage and diagnostics
+- Internet access is restricted.
+- The same server and component population is assessed repeatedly.
+- Deterministic regression or repeatable customer reporting is required.
+- Live BCG access is slow or unavailable.
 
-### BMC and Redfish
+The cache must include provenance, creation date, target ESXi/VCF release, normalized vendor/model keys, pagination completeness, query-plan checksum, result checksum, and source references. A cache entry is evidence only for the exact identifiers and release represented. Missing or failed cache lookups remain `Verify`; they are not `Unsupported`.
 
-- Server manufacturer and model
-- BIOS and BMC firmware
-- CPU and DIMM inventory
-- Secure Boot and TPM
-- PCIe models, firmware, and identifiers
-- Storage controllers and physical drives
-- Health and diagnostic results
+## Outputs
 
----
+- Branded self-contained HTML readiness report
+- Excel evidence and remediation workbook
+- High-resolution PNG charts
+- BCG verification JSON and source references
+- Prioritized remediation actions and validation methods
+- Evidence completeness, diagnostic, and release-gate results
 
-## Report capabilities
-
-The report includes:
-
-- Executive decision dashboard
-- Per-vCenter architecture and readiness cards
-- Cluster readiness and recommended pathways
-- Gate-based domain scoring
-- Hardware and Broadcom compatibility evidence
-- CPU, server, adapter, driver, firmware, storage, and NVMe findings
-- Lifecycle and version readiness
-- vSphere 8 health and conversion prechecks
-- Security, TPM, Secure Boot, VM encryption, vTPM, and cTPM readiness
-- Network, VMkernel, distributed-switch, and uplink findings
-- vSAN and datastore readiness
-- HCX migration readiness and per-VM constraints
-- Capacity, N+1, utilization, licensing, right-sizing, and memory tiering
-- Evidence-completeness matrix
-- Prioritized remediation action register
-- Detailed source-verification appendix
-
-The source environment is assumed to be vSphere 8 without NSX, SDDC Manager, or VCF Operations. Those products are not treated as missing prerequisites or limitations.
-
----
-
-## Readiness terminology
-
-| Status | Meaning |
-|---|---|
-| Verified eligible | Exact evidence supports readiness for VCF 9.1 or ESXi 9.1 |
-| Ready with conditions | Supported with a documented restriction, deprecated component, or required configuration condition |
-| Verify | Exact BCG or configuration evidence remains incomplete |
-| Remediation available | A specific change can make the object eligible |
-| Blocked | Current server, CPU, lifecycle, capacity, or other authoritative evidence prevents readiness |
-| Not collected | The collector evidence required for the check is absent |
-
-Missing evidence is never treated as unsupported, and missing evidence cannot create a passing score.
-
----
-
-## Broadcom Compatibility Guide workflow
-
-The skill first attempts live BCG access.
-
-- If live BCG succeeds, the report uses the live results.
-- If BCG access is blocked or incomplete, the skill exports a portable sidecar plan.
-- The sidecar uses the same query and matching modules as the live workflow.
-- Imported sidecar results must pass plan, checksum, freshness, and evidence validation.
-
-The workflow supports:
-
-- Exact server-model matching
-- Canonical HPE, Cisco, and Dell partner matching
-- ESXi 9.1 release validation
-- CPU-series correlation
-- PCI VID/DID/SVID/SSID lookup
-- Driver and firmware evidence association
-- Conservative unresolved handling for storage records lacking exact BCG identifiers
-
----
-
-## Safety and security
+## Security requirements
 
 - All collectors are read-only.
-- No collector writes vCenter or BMC passwords to the CSV outputs.
-- Use least-privilege inventory accounts.
-- Pilot each collector against one vCenter and a small BMC list first.
-- Keep separate output directories for each collection run.
-- Review diagnostic files before interpreting empty outputs.
-- Keep `KEY.csv` at the customer site.
-- Do not upload credentials, unrestricted logs, or stale intermediate evidence.
-- Protect restored and unsanitized reports according to customer data-handling requirements.
+- Credentials must not be written to evidence outputs.
+- `KEY.csv` remains at the customer site.
+- Never upload credentials, unrestricted logs, customer-retained keys, or stale evidence.
+- Sanitized deliverables remain customer technical information.
+- Unsanitized and restored deliverables require customer-approved handling controls.
 
----
+## Upload package requirements
 
-## Related documentation
+The Copilot upload ZIP must contain `SKILL.md` and its required runtime resources. Exclude generated `.html` reports, test fixtures such as `WI18_visual_fixture.html`, development outputs, temporary caches, customer evidence, credentials, and `KEY.csv`. Runtime JSON resources may remain when referenced by the Skill or scripts.
 
-- `RunCollection.md`: command-by-command collection and packaging runbook
-- `WIKI.md`: architecture, evidence model, reporting logic, troubleshooting, and operating procedures
-- `Workflow-VCF91-Readiness.png`: visual five-stage workflow
-
----
-
-## Current release status
-
-The report skill has passed:
-
-- Active Python regression tests
-- HTML and Excel generation
-- 34 report QA checks
-- Count-integrity checks
-- HTML-to-analysis consistency checks
-- Sanitization verification
-- Leak scanning
-- Release gating
-
-External collectors remain subject to live validation against representative target vCenters and BMC implementations.
-
+See `WIKI.md` for architecture, evidence semantics, troubleshooting, operating procedures, and deployment details.
